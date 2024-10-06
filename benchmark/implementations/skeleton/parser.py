@@ -36,7 +36,7 @@ class ParserSkeleton(ABC):
 
         self.engine = create_database_engine(engine_type, sqlite_folder_path)
 
-    def write_zip_to_database(self, zip_file_path: str):
+    def write_zip_to_database(self, zip_file_path: str) -> None:
         with ZipFile(zip_file_path, "r") as f:
             files_list = f.namelist()
             files_list = correct_ordering_of_filelist(files_list)

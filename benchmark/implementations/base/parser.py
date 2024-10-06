@@ -16,7 +16,7 @@ from benchmark.implementations.skeleton.utilities import (
 from open_mastr.utils.orm import tablename_mapping
 
 
-class BasePaper(ParserSkeleton):
+class Parser(ParserSkeleton):
     def add_table_to_database(
             self,
             df: pd.DataFrame,
