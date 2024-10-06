@@ -7,6 +7,7 @@ import pandas as pd
 from sqlalchemy.engine import Engine
 
 from benchmark.implementations.skeleton.utilities import (
+    cast_date_columns_to_datetime,
     correct_ordering_of_filelist,
     create_database_table,
     extract_xml_table_name,
@@ -56,6 +57,7 @@ class ParserSkeleton(ABC):
 
                 df = self.read_xml(f, file_name)
                 df = preprocess_table_for_writing_to_database(df, xml_table_name)
+                df = cast_date_columns_to_datetime(xml_table_name, df)
                 df = cleanse_bulk_data(df, zip_file_path)
 
                 self.add_table_to_database(df, xml_table_name, sql_table_name, if_exists="append", engine=self.engine)

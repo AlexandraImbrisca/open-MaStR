@@ -20,7 +20,7 @@ for implementation in implementations:
 
     for database in databases:
         start = time.time()
-        # implementation.parser.write_zip_to_database(database.zip_file_path)
+        implementation.parser.write_zip_to_database(database.zip_file_path)
         end = time.time()
 
         list_of_strings.append(f"{end - start}")

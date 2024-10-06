@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date
 from io import StringIO
 from shutil import Error
 
@@ -227,7 +227,7 @@ def preprocess_table_for_writing_to_database(
     df = change_column_names_to_orm_format(df, xml_table_name)
 
     # Add Column that refers to the source of the data
-    bulk_download_date = datetime.today().strftime('%Y-%m-%d')
+    bulk_download_date = date.today().strftime("%Y%m%d")
     df["DatenQuelle"] = "bulk"
     df["DatumDownload"] = bulk_download_date
     return df
