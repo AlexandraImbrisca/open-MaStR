@@ -1,47 +1,67 @@
-from benchmark.implementations.skeleton.parser import ParserSkeleton
-from open_mastr.utils.orm import tablename_mapping
-from open_mastr.xml_download.utils_cleansing_bulk import cleanse_bulk_data
+from typing import Literal
 from zipfile import ZipFile
+
+import pandas as pd
+from lxml.etree import XMLSyntaxError
+from sqlalchemy.engine import Engine
+from sqlalchemy.exc import DataError, IntegrityError
+
+from benchmark.implementations.skeleton.parser import ParserSkeleton
+from benchmark.implementations.skeleton.utilities import (
+    add_missing_columns_to_table,
+    delete_wrong_xml_entry,
+    handle_xml_syntax_error,
+    write_single_entries_until_not_unique_comes_up,
+)
+from open_mastr.utils.orm import tablename_mapping
 
 
 class BasePaper(ParserSkeleton):
-    def write_zip_to_database(self, zip_file_path: str):
-        with ZipFile(zip_file_path, "r") as f:
-            files_list = f.namelist()
-            files_list = ParserSkeleton.correct_ordering_of_filelist(files_list)
+    def add_table_to_database(
+            self,
+            df: pd.DataFrame,
+            xml_table_name: str,
+            sql_table_name: str,
+            if_exists: Literal["fail", "replace", "append"],
+            engine: Engine,
+    ) -> None:
+        # get a dictionary for the data types
+        table_columns_list = list(
+            tablename_mapping[xml_table_name]["__class__"].__table__.columns
+        )
+        dtypes_for_writing_sql = {
+            column.name: column.type
+            for column in table_columns_list
+            if column.name in df.columns
+        }
 
-            for file_name in files_list:
-                # xml_tablename is the beginning of the filename without the number in lowercase
-                xml_tablename = file_name.split("_")[0].split(".")[0].lower()
+        add_missing_columns_to_table(engine, xml_table_name, column_list=df.columns.tolist())
 
-                sql_tablename = tablename_mapping[xml_tablename]["__name__"]
+        for _ in range(10000):
+            try:
+                with engine.connect() as con:
+                    with con.begin():
+                        df.to_sql(
+                            sql_table_name,
+                            con=con,
+                            index=False,
+                            if_exists=if_exists,
+                            dtype=dtypes_for_writing_sql,
+                        )
+                        break
 
-                if ParserSkeleton.is_first_file(file_name):
-                    ParserSkeleton.create_database_table(engine=self.engine, xml_tablename=xml_tablename)
-                    print(
-                        f"Table '{sql_tablename}' is filled with data '{xml_tablename}' "
-                        "from the bulk download."
-                    )
-                print(f"File '{file_name}' is parsed.")
+            except DataError as err:
+                delete_wrong_xml_entry(err, df)
 
-                df = ParserSkeleton.preprocess_table_for_writing_to_database(
-                    f=f,
-                    file_name=file_name,
-                    xml_tablename=xml_tablename,
+            except IntegrityError:
+                # error resulting from Unique constraint failed
+                df = write_single_entries_until_not_unique_comes_up(
+                    df, xml_table_name, engine
                 )
 
-                # Convert date and datetime columns into the datatype datetime
-                df = ParserSkeleton.cast_date_columns_to_datetime(xml_tablename, df)
-
-                df = cleanse_bulk_data(df, zip_file_path)
-
-                ParserSkeleton.add_table_to_database(
-                    df=df,
-                    xml_tablename=xml_tablename,
-                    sql_tablename=sql_tablename,
-                    if_exists="append",
-                    engine=self.engine,
-                )
-
-    print("Bulk download and data cleansing were successful.")
-
+    def read_xml(self, f: ZipFile, file_name: str) -> pd.DataFrame:
+        data = f.read(file_name)
+        try:
+            return pd.read_xml(data, encoding="UTF-16", compression="zip")
+        except XMLSyntaxError as error:
+            return handle_xml_syntax_error(data.decode("utf-16"), error)
