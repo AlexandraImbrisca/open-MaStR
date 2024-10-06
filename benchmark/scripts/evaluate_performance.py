@@ -15,12 +15,30 @@ implementations = get_implementations()
 list_of_strings = ["Implementation"]
 list_of_strings.extend([f"Database {database.name}" for database in databases])
 
+data_bulk = [
+    "biomass",
+    "combustion",
+    "gsgk",
+    "hydro",
+    "nuclear",
+    "solar",
+    "storage",
+    "wind",
+    "balancing_area",
+    "electricity_consumer",
+    "gas",
+    "grid",
+    "location",
+    "market",
+    "permit",
+]
+
 for implementation in implementations:
     list_of_strings.append(implementation.name)
 
     for database in databases:
         start = time.time()
-        implementation.parser.write_zip_to_database(database.zip_file_path)
+        implementation.parser.write_zip_to_database(database.zip_file_path, data_bulk)
         end = time.time()
 
         list_of_strings.append(f"{end - start}")

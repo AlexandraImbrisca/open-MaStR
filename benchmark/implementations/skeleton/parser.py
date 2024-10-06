@@ -13,8 +13,10 @@ from benchmark.implementations.skeleton.utilities import (
     extract_xml_table_name,
     extract_sql_table_name,
     is_first_file,
+    is_table_relevant,
     preprocess_table_for_writing_to_database,
 )
+from open_mastr.utils.helpers import data_to_include_tables
 from open_mastr.utils.config import (
     get_output_dir
 )
@@ -37,13 +39,19 @@ class ParserSkeleton(ABC):
 
         self.engine = create_database_engine(engine_type, sqlite_folder_path)
 
-    def write_zip_to_database(self, zip_file_path: str) -> None:
+    def write_zip_to_database(self, zip_file_path: str, data: list) -> None:
+        include_tables = data_to_include_tables(data, mapping="write_xml")
+
         with ZipFile(zip_file_path, "r") as f:
             files_list = f.namelist()
             files_list = correct_ordering_of_filelist(files_list)
 
             for file_name in files_list:
                 xml_table_name = extract_xml_table_name(file_name)
+
+                if not is_table_relevant(xml_table_name, include_tables):
+                    continue
+
                 sql_table_name = extract_sql_table_name(xml_table_name)
 
                 if is_first_file(file_name):

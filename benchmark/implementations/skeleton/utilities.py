@@ -219,6 +219,20 @@ def is_first_file(file_name: str) -> bool:
     )
 
 
+def is_table_relevant(xml_table_name: str, include_tables: list) -> bool:
+    """Checks if the table contains relevant data and if the user wants to
+    have it in the database."""
+    # few tables are only needed for data cleansing of the xml files and contain no
+    # information of relevance
+    boolean_write_table_to_sql_database = (
+        tablename_mapping[xml_table_name]["__class__"] is not None
+    )
+    # check if the table should be written to sql database (depends on user input)
+    include_count = include_tables.count(xml_table_name)
+
+    return include_count == 1 and boolean_write_table_to_sql_database
+
+
 def preprocess_table_for_writing_to_database(
         df: pd.DataFrame,
         xml_table_name: str,
