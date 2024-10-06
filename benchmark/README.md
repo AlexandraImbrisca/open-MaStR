@@ -29,3 +29,8 @@ XML files and adding the tables to the SQL database.
 - a set of utilities that can be used widely across all implementations (e.g., casting functions)
 - a base implementation extracted from the current open-MaStR repository
 - a new parser (i.e., class that extends the ```ParserSkeleton```) for each of the new exploratory implementations
+
+## Scripts
+
+The evaluate_performance script creates a parser from each of the implementations available and runs the target
+functionality on each of the databases. The parsing speed is written automatically in the ```results.md``` file.
