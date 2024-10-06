@@ -23,9 +23,11 @@ from open_mastr.xml_download.utils_cleansing_bulk import cleanse_bulk_data
 
 class ParserSkeleton(ABC):
     """
-    Abstract class that defines a common interface for all the different parsing
-    implementations. By implementing the abstract methods, each parser can provide
-    diverse algorithms while taking advantage of the common functionality.
+    Abstract class that defines the main parsing flow via the write_zip_to_database
+    function. By implementing the abstract methods, each parser can provide
+    different implementations for:
+    - parsing the XML file
+    - adding the table to the SQL database
     """
 
     def __init__(self):
