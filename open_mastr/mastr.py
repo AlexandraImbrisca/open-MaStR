@@ -77,7 +77,6 @@ class Mastr:
     """
 
     def __init__(self, engine="sqlite", connect_to_translated_db=False) -> None:
-
         validate_parameter_format_for_mastr_init(engine)
 
         self.output_dir = get_output_dir()
@@ -150,6 +149,7 @@ class Mastr:
             | "balancing_area"      | Yes  | No   |
             | "permit"              | Yes  | Yes  |
             | "deleted_units"       | Yes  | No   |
+            | "deleted_market_actors"| Yes | No   |
             | "retrofit_units"      | Yes  | No   |
         date : None or `datetime.datetime` or str, optional
 
@@ -164,8 +164,10 @@ class Mastr:
 
             Default to `None`.
         bulk_cleansing : bool, optional
-            If True, data cleansing is applied after the download (which is recommended). Default
-            to True.
+            If set to True, data cleansing is applied after the download (which is recommended).
+            In its original format, many entries in the MaStR are encoded with IDs. Columns like
+            `state` or `fueltype` do not contain entries such as "Hessen" or "Braunkohle", but instead
+            only contain IDs. Cleansing replaces these IDs with their corresponding original entries.
         api_processes : int or None or "max", optional
             Number of parallel processes used to download additional data.
             Defaults to `None`. If set to "max", the maximum number of possible processes
