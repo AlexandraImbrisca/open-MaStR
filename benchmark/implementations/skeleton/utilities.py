@@ -333,7 +333,7 @@ def default_add_table_to_database(
             )
 
 
-def default_read_xml(self, f: ZipFile, file_name: str) -> pd.DataFrame:
+def default_read_xml(f: ZipFile, file_name: str) -> pd.DataFrame:
     data = f.read(file_name)
     try:
         return pd.read_xml(data, encoding="UTF-16", compression="zip")
