@@ -1,10 +1,9 @@
 from typing import Literal
 from zipfile import ZipFile
 from sqlalchemy.engine import Engine
-from distutils.util import strtobool
+from lxml import etree
 
 import pandas as pd
-import xml.etree.ElementTree as et
 
 from benchmark.implementations.skeleton.parser import ParserSkeleton
 from benchmark.implementations.skeleton.utilities import (
@@ -25,13 +24,14 @@ class Parser(ParserSkeleton):
         default_add_table_to_database(df, xml_table_name, sql_table_name, if_exists, engine)
 
     def read_xml(self, f: ZipFile, file_name: str) -> pd.DataFrame:
-        data = f.open(file_name, 'r') .read().decode("utf-16")
-        root = et.fromstring(data)  # Parse XML
+        data = f.open(file_name, 'r')
+        tree = etree.parse(data)
+        root = tree.getroot()
 
         data = []
         cols = []
 
-        for i, node in enumerate(root):
+        for node in root:
             row_data = {child.tag: convert_value(child.text) for child in node}
 
             for tag in row_data.keys():

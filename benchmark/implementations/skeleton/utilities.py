@@ -3,6 +3,7 @@ from io import StringIO
 from shutil import Error
 from typing import Literal
 from zipfile import ZipFile
+from distutils.util import strtobool
 
 import numpy as np
 import pandas as pd
@@ -339,3 +340,22 @@ def default_read_xml(f: ZipFile, file_name: str) -> pd.DataFrame:
         return pd.read_xml(data, encoding="UTF-16", compression="zip")
     except XMLSyntaxError as error:
         return handle_xml_syntax_error(data.decode("utf-16"), error)
+
+
+def convert_value(value):
+    if value is None:
+        return None
+
+    # Try to evaluate the string as a boolean
+    try:
+        return bool(strtobool(value.lower()))
+    except ValueError:
+        pass
+
+    # Try to evaluate the string as a numerical value
+    try:
+        return pd.to_numeric(value)
+    except (ValueError, TypeError):
+        pass
+
+    return value
