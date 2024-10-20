@@ -1,11 +1,16 @@
 from datetime import date
 from io import StringIO
 from shutil import Error
+from typing import Literal
+from zipfile import ZipFile
+from distutils.util import strtobool
 
 import numpy as np
 import pandas as pd
 import sqlalchemy
 from lxml.etree import XMLSyntaxError
+from sqlalchemy.engine import Engine
+from sqlalchemy.exc import DataError, IntegrityError
 from sqlalchemy.sql.sqltypes import Date, DateTime
 
 from open_mastr.utils.config import setup_logger
@@ -13,7 +18,7 @@ from open_mastr.utils.orm import tablename_mapping
 
 
 def add_missing_columns_to_table(
-        engine: sqlalchemy.engine.Engine,
+        engine: Engine,
         xml_table_name: str,
         column_list: list,
 ) -> None:
@@ -136,7 +141,7 @@ def correct_ordering_of_filelist(files_list: list) -> list:
     return files_list
 
 
-def create_database_table(engine: sqlalchemy.engine.Engine, xml_table_name: str) -> None:
+def create_database_table(engine: Engine, xml_table_name: str) -> None:
     orm_class = tablename_mapping[xml_table_name]["__class__"]
     # drop the content from table
     orm_class.__table__.drop(engine, checkfirst=True)
@@ -225,7 +230,7 @@ def is_table_relevant(xml_table_name: str, include_tables: list) -> bool:
     # few tables are only needed for data cleansing of the xml files and contain no
     # information of relevance
     boolean_write_table_to_sql_database = (
-        tablename_mapping[xml_table_name]["__class__"] is not None
+            tablename_mapping[xml_table_name]["__class__"] is not None
     )
     # check if the table should be written to sql database (depends on user input)
     include_count = include_tables.count(xml_table_name)
@@ -248,7 +253,7 @@ def preprocess_table_for_writing_to_database(
 
 
 def write_single_entries_until_not_unique_comes_up(
-        df: pd.DataFrame, xml_table_name: str, engine: sqlalchemy.engine.Engine
+        df: pd.DataFrame, xml_table_name: str, engine: Engine
 ) -> pd.DataFrame:
     """
     Remove from dataframe these rows, which are already existing in the database table
@@ -285,3 +290,72 @@ def write_single_entries_until_not_unique_comes_up(
     print(f"{len_df_before - len(df)} entries already existed in the database.")
 
     return df
+
+
+def default_add_table_to_database(
+        df: pd.DataFrame,
+        xml_table_name: str,
+        sql_table_name: str,
+        if_exists: Literal["fail", "replace", "append"],
+        engine: Engine,
+) -> None:
+    # get a dictionary for the data types
+    table_columns_list = list(
+        tablename_mapping[xml_table_name]["__class__"].__table__.columns
+    )
+    dtypes_for_writing_sql = {
+        column.name: column.type
+        for column in table_columns_list
+        if column.name in df.columns
+    }
+
+    add_missing_columns_to_table(engine, xml_table_name, column_list=df.columns.tolist())
+
+    for _ in range(10000):
+        try:
+            with engine.connect() as con:
+                with con.begin():
+                    df.to_sql(
+                        sql_table_name,
+                        con=con,
+                        index=False,
+                        if_exists=if_exists,
+                        dtype=dtypes_for_writing_sql,
+                    )
+                    break
+
+        except DataError as err:
+            delete_wrong_xml_entry(err, df)
+
+        except IntegrityError:
+            # error resulting from Unique constraint failed
+            df = write_single_entries_until_not_unique_comes_up(
+                df, xml_table_name, engine
+            )
+
+
+def default_read_xml(f: ZipFile, file_name: str) -> pd.DataFrame:
+    data = f.read(file_name)
+    try:
+        return pd.read_xml(data, encoding="UTF-16", compression="zip")
+    except XMLSyntaxError as error:
+        return handle_xml_syntax_error(data.decode("utf-16"), error)
+
+
+def convert_value(value):
+    if value is None:
+        return None
+
+    # Try to evaluate the string as a boolean
+    try:
+        return bool(strtobool(value.lower()))
+    except ValueError:
+        pass
+
+    # Try to evaluate the string as a numerical value
+    try:
+        return pd.to_numeric(value)
+    except (ValueError, TypeError):
+        pass
+
+    return value
