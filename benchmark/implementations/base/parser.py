@@ -1,8 +1,8 @@
+from sqlalchemy.engine import Engine
 from typing import Literal
 from zipfile import ZipFile
 
 import pandas as pd
-from sqlalchemy.engine import Engine
 
 from benchmark.implementations.skeleton.parser import ParserSkeleton
 from benchmark.implementations.skeleton.utilities import (

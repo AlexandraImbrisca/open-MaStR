@@ -1,10 +1,10 @@
 from abc import ABC, abstractmethod
 from os import path
+from sqlalchemy.engine import Engine
 from typing import Literal
 from zipfile import ZipFile
 
 import pandas as pd
-from sqlalchemy.engine import Engine
 
 from benchmark.implementations.skeleton.utilities import (
     cast_date_columns_to_datetime,

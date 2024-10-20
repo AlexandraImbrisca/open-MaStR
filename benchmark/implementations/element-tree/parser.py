@@ -26,7 +26,7 @@ class Parser(ParserSkeleton):
 
     def read_xml(self, f: ZipFile, file_name: str) -> pd.DataFrame:
         data = f.open(file_name, 'r') .read().decode("utf-16")
-        root = et.fromstring(data)  # Parse XML
+        root = et.fromstring(data)
 
         data = []
         cols = []
